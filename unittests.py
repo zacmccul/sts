@@ -3,6 +3,9 @@ import creature
 import jaw_worm
 import heart
 import random
+import simulator
+import game_constants
+import game_status
 
 class TestAbstractStatus(unittest.TestCase):
     
@@ -18,6 +21,8 @@ class TestAbstractStatus(unittest.TestCase):
         self.assertFalse('newAttr' in self.abs)
         self.abs.newAttr
         self.assertTrue('newAttr' in self.abs)
+        self.assertFalse('newAttr2' in self.abs)
+        self.assertFalse('newAttr2' in self.abs)
     
     def test_getitem(self):
         self.assertEqual(self.abs['frail'], 2)
@@ -55,24 +60,60 @@ class TestAbstractDerived(unittest.TestCase):
         self.assertEqual(sorted(list(key for key in self.abs)), sorted(['frail', 'newAttr']))
 
 
+class TestGameConstants(unittest.TestCase):
+    def setUp(self) -> None:
+        return super().setUp()
+    
+    def test_constants(self) -> None:
+        self.assertEqual(len(game_constants.ALL_STATUSES), 4)
+
+
+class TestGameStatus(unittest.TestCase):
+    def setUp(self) -> None:
+        return super().setUp()
+    
+    def test_act(self) -> None:
+        self.assertEqual(game_status.state.act, 3)
+
 class TestCreature(unittest.TestCase):
     
     def setUp(self):
         self.creature = creature.Creature(100, 10, {'frail': 2}, {'strength': 4})
         
     
+
+
     def test_access(self):
         self.assertEqual(100, self.creature.hp)
         self.assertEqual(10, self.creature.block)
         self.assertEqual(2, self.creature.frail)
         self.assertEqual(4, self.creature.strength)
+        self.assertFalse('newAttr2' in self.creature.statuses)
+        self.assertFalse('newAttr2' in self.creature.statuses)
+        self.assertFalse('weak' in self.creature.statuses)
+        self.assertFalse('weak' in self.creature.statuses)
+        
+        self.assertEqual(4, self.creature.permanents['strength'])
+        print('right prior')
+        self.creature.strength += 3
+        #self.creature.permanents['strength'] += 3
+        print('right after')
+        self.assertEqual(7, self.creature.permanents['strength'])
     
     def test_take_hit(self):
         self.creature.start_turn_resolution()
-        self.assertEqual(self.creature.frail, 1)
+        self.assertEqual(self.creature.frail, 2)
         self.assertEqual(self.creature.strength, 4)
+        self.creature.end_turn_resolution()
+        
+        self.creature.turns_taken = 1
+        self.creature.start_turn_resolution()
+        self.assertEqual(self.creature.frail, 1)
+        self.creature.end_turn_resolution()
+        
         self.creature.start_turn_resolution()
         self.assertTrue('frail' not in self.creature.statuses)
+        
         self.creature.take_hit(creature.Attack(damage=10))
         self.assertEqual(self.creature.hp, 90)
         self.creature.statuses['vulnerable'] = 2
@@ -112,15 +153,19 @@ class TestCreature(unittest.TestCase):
         self.assertEqual(self.creature.block, 0)
     
     def test_start_turn_resolution(self):
+        self.creature.turns_taken = 1
         self.creature.start_turn_resolution()
+        self.creature.end_turn_resolution()
         self.assertEqual(self.creature.frail, 1)
         self.assertEqual(self.creature.strength, 4)
         self.creature.start_turn_resolution()
+        self.creature.end_turn_resolution()
         self.assertTrue('frail' not in self.creature.statuses)
         
         self.creature.block = 10
         self.creature.statuses['blur'] = 1
         self.creature.start_turn_resolution()
+        self.creature.end_turn_resolution()
         self.assertEqual(self.creature.block, 10)
         self.assertTrue('blur' not in self.creature.statuses)
         self.creature.start_turn_resolution()
@@ -132,7 +177,7 @@ class TestCreature(unittest.TestCase):
         self.creature.statuses['regeneration'] = 5
         self.creature.end_turn_resolution()
         self.assertEqual(self.creature.hp, 100)
-        self.assertEqual(self.creature.regeneration, 5)
+        self.assertEqual(self.creature.regeneration, 4)
         self.creature.hp = 96
         self.creature.end_turn_resolution()
         self.assertEqual(self.creature.hp, 100)
@@ -307,7 +352,6 @@ class TestJawWorm(unittest.TestCase):
         self.worm.turns_taken += 1
         self.worm.prev_actions.append('bellow')
         
-
 class TestUtils(unittest.TestCase):
     
     def test_random_chooser(self) -> None:
@@ -341,3 +385,46 @@ class TestUtils(unittest.TestCase):
             assert False, "Should have raised an exception"
         except Exception as e:
             assert str(e) == "All elements have been chosen"
+
+
+class TestSimulator(unittest.TestCase):
+    
+    def setUp(self) -> None:
+        self.s = simulator.Simulator([jaw_worm.JawWorm(hp=100)], [heart.Heart(hp=100)])
+        return super().setUp()
+    
+    def test_resolve_one_creature_turn(self):
+        random.seed(0)
+        worm = self.s.left_creatures[0]
+        heart = self.s.right_creatures[0]
+        self.assertFalse('frail' in heart.statuses)
+        self.assertFalse('weak' in heart.statuses)
+        self.assertFalse('vulnerable' in heart.statuses)
+        self.assertFalse('frail' in worm.statuses)
+        self.assertFalse('weak' in worm.statuses)
+        self.assertFalse('vulnerable' in worm.statuses)
+        
+        self.assertEqual(worm.strength, 5)
+        
+        
+        # worm chomp attack
+        self.s.resolve_one_creature_turn(worm, True)
+        self.assertEqual(worm.hp, 100)
+        self.assertEqual(worm.block, 7)
+        self.assertEqual(heart.hp, 83)
+        
+        # heart debuff
+        self.s.resolve_one_creature_turn(heart, False)
+        self.assertEqual(worm.hp, 100)
+        self.assertEqual(worm.block, 7)
+        self.assertEqual(heart.hp, 83)
+        self.assertTrue('frail' in worm.statuses)
+        self.assertTrue('vulnerable' in worm.statuses)
+        self.assertTrue('weak' in worm.statuses)
+
+        
+        # worm turn 2 thrash: 
+        self.s.resolve_one_creature_turn(worm, True)
+        self.assertEqual(worm.hp, 100)
+        self.assertEqual(worm.block, 3)
+        self.assertEqual(heart.hp, 83)

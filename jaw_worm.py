@@ -74,11 +74,11 @@ class JawWorm(Creature):
             self.block += 6
             self.strength += 3
             return Attack()
-            
         elif settings.ascension < 17:
             self.block += 6
             self.strength += 4
             return Attack()
-        self.block += 9
-        self.strength += 5
-        return Attack()
+        else:
+            self.block += 9
+            self.strength += 5
+            return Attack()

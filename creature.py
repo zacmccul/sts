@@ -1,5 +1,8 @@
 from typing import Any
+
 import custom_typing as t
+import custom_typing as t
+from collections import UserDict
 from attack import Attack
 
 import math
@@ -18,6 +21,59 @@ import game_constants
 #  FIX TYPING ON SHTUFF
 ####
 
+class ModifierDict(UserDict[str, t.Any]):
+    
+    def __init__(self, initial_dict: dict[str, t.Any], /, default_val: t.Any = None):
+        
+        super().__init__()
+        self.update(initial_dict)
+        self.default_val = default_val
+    
+    def __getattr__(self, attr: str) -> t.Any:
+        try:
+            return object.__getattribute__(self, attr)
+        except AttributeError:
+            return self.data[attr]
+    
+    def __setattr__(self, __name: str, __value: Any) -> None:
+        print(f'setattr: {__name}/{__value}')
+        if __name in ('data', 'default_val'):
+            return super().__setattr__(__name, __value)
+        # try:
+        #     cur_val = super().__getattribute__(__name)
+        # except AttributeError:
+        #     cur_val = None
+        # if isinstance(__value, int) and cur_val is None:
+        #     print('??')
+        #     self.data[__name] = __value
+        #     return
+        return super().__setattr__(__name, __value)
+        
+
+class StatusesTest(ModifierDict):
+    def __init__(self, initial_dict: dict[str, Any], /, default_val: Any = None):
+        super().__init__(initial_dict, default_val=0 if default_val is None else default_val)
+    
+    def __setitem__(self, key: str, item: Any) -> None:
+        super().__setitem__(key, item)
+        if isinstance(item, int) and self.data[key] <= 0:
+            del self.data[key]
+    
+    def turn_start(self) -> None:
+        for kv_tup in list(self.data.items()):
+            if kv_tup[1] is None:
+                continue
+            new_val = kv_tup[1] - 1
+            if new_val <= 0:
+                del self.data[kv_tup[0]]
+            else:
+                self.data[kv_tup[0]] = new_val
+
+class PermanentsTest(ModifierDict):
+    def __init__(self, initial_dict: dict[str, t.Any], /) -> None:
+        super().__init__(initial_dict, default_val=None)
+
+
 class AbstractModifier:
     """Provides the abstract class for permanents and statuses among others, 
     enabling a JavaScript-esque interface to a dictionary, allowing you to call
@@ -28,6 +84,9 @@ class AbstractModifier:
     def __init__(self, initial_dict: dict[str, t.Any], /, default_val: t.Any = None) -> None:
         self.dict = initial_dict
         self.default_val = default_val
+        self.__iter__()
+    
+    
     
     def __getattr__(self, attr: str) -> t.Any:
         """Modification so that on get attribute if it doesn't start with _ it 
@@ -42,15 +101,32 @@ class AbstractModifier:
         Returns:
             _type_: The corresponding value.
         """
-        try:
-            return getattr(super, attr)
-        except AttributeError:
+        print(f'45/attr: {attr}')
+        # try:
+        #     #return getattr(super, attr)
+        #     object.__getattribute__(self, attr)
+        # except AttributeError:
+        # if attr == 'dict':
+        #     return object.__getattribute__(self, attr)
+        if True:
+            print('attr error')
             if attr in self.dict:
-                return self.dict[attr]
+                print(f'51, {self.dict}')
+                temp = object.__getattribute__(self, 'dict')[attr]
+                print(f'temp: {temp}')
+                return temp
             elif len(attr) and attr[0] != '_':
                 self.dict[attr] = self.default_val
                 return self.dict[attr]
-            raise
+            return object.__getattribute__(self, attr)
+            #raise
+    
+    def __setattr__(self, attr: str, value: t.Any) -> None:
+        print(f'in setattr {attr}/{value}')
+        if attr in ('dict', '_keys', 'default_val'):
+            super().__setattr__(attr, value)
+            return
+        self.dict[attr] = value
     
     def __contains__(self, item: t.Any) -> bool:
         return item in self.dict
@@ -63,12 +139,12 @@ class AbstractModifier:
             return self.dict[item]
     
     def __iter__(self) -> t.Iterator[t.Any]:
-        self.__keys = iter(self.dict.keys())
-        return self.__keys
+        super().__setattr__('_keys', iter(self.dict.keys()))
+        return self._keys
     
     def __next__(self) -> t.Any:
-        key = next(self.__keys)
-        return self.data[key]
+        key = next(self._keys)
+        return self.dict[key]
     
     def __setitem__(self, item: str, value: t.Any) -> None:
         self.dict[item] = value
@@ -77,6 +153,9 @@ class AbstractModifier:
     
     def __delitem__(self, item: str) -> None:
         del self.dict[item]
+    
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({self.dict})'
     
     def keys(self) -> t.KeysView[str]:
         return self.dict.keys()
@@ -92,8 +171,8 @@ class Statuses(AbstractModifier):
     def __init__(self, initial_dict: dict[str, t.Any], /) -> None:
         super().__init__(initial_dict, default_val=0)
     
-    def __getattr__(self, attr: str) -> t.Any:
-        return super().__getattr__(attr)
+    # def __getattr__(self, attr: str) -> t.Any:
+    #     return super().__getattr__(attr)
 
     def turn_start(self) -> None:
         """Decrements each status by one, representing the # of turns it has.
@@ -130,11 +209,13 @@ class Creature:
                  ) -> None:
         self.raw_hp, self.cur_block = hp, cur_block
         self.max_hp = hp
-        self.statuses = Statuses(statuses)
-        self.permanents = Permanents(permanents)
+        self.statuses = StatusesTest(statuses)
+        self.permanents = PermanentsTest(permanents)
         self.action_dict = action_dict
         self.turns_taken = 0
         self.alive = True if hp is not None and hp > 0 else False
+        
+        self.current_turn_taken_damage = 0
         
         
         self.prev_actions: list[t.Any] = []
@@ -152,6 +233,7 @@ class Creature:
         try:
             return getattr(super, attr)
         except AttributeError:
+            print(f'236 {attr}')
             # Creatively check if they exist, and if they should exist,
             # define them and return. This works because everything in the game
             # should be in game_constants.
@@ -159,17 +241,21 @@ class Creature:
             # priority is in subclass, then creature, then permanents,
             # then statuses, so in case of name conflict that's how it's resolved
             # (but ideally should never happen!)
-            if attr in self.permanents:
-                return getattr(self.permanents, attr)
-            elif attr in game_constants.ALL_PERMANENTS:
-                self.permanents.dict[attr] = 0
-                return getattr(self.permanents, attr)
-            elif attr in self.statuses:
-                return getattr(self.statuses, attr)
+            # if attr in self.permanents:
+            #     print('245')
+            #     return self.permanents[attr]
+            if attr in game_constants.ALL_PERMANENTS:
+                # self.permanents.data[attr] = None
+                print(f'249 {attr}')
+                temp = self.permanents[attr]
+                print(f'251 temp: {temp}')
+                return temp
+            # elif attr in self.statuses:
+            #     return getattr(self.statuses, attr)
             elif attr in game_constants.ALL_STATUSES:
-                self.statuses.dict[attr] = 0
-                return getattr(self.statuses, attr)
+                return self.statuses[attr]
             raise
+            
     
     # exists soley for typechecking to work properly.
     if t.TYPE_CHECKING:
@@ -178,6 +264,11 @@ class Creature:
         def __setattr__(self, __name: str, __value: Any) -> None:
             pass
     
+    def __repr__(self) -> str:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            return f'{self.__class__.__name__}(hp={self.hp}, block={self.block}, permanents={self.permanents}, statuses={self.statuses})'
+
+        return f'{self.__class__.__name__}(hp={self.hp}, block={self.block})'
     
     @property
     def hp(self) -> int:
@@ -186,7 +277,7 @@ class Creature:
     @hp.setter
     def hp(self, other: int) -> None:
         if 'buffer' in self.permanents:
-            self.permanents.buffer -= 1
+            self.buffer -= 1
             return
         self.raw_hp = other
         if self.raw_hp <= 0:
@@ -277,25 +368,26 @@ class Creature:
         return outgoing_damage    
 
     def take_damage(self, damage: int) -> None:
+        
         if damage > self.block:
+            
             damage = damage - self.block
+            if 'invincible' in self.permanents and self.current_turn_taken_damage + damage > self.permanents.invincible:
+                damage = self.permanents.invincible - self.current_turn_taken_damage
             self.block = 0
             self.hp -= damage
         else:
             self.block -= damage
+        logging.debug(f'{self} took {damage} damage. HP={self.hp}, Block={self.block}.')    
 
     def start_turn_resolution(self) -> bool:
+        
+        # on first turn don't resolve start of turn effects
+        if self.turns_taken == 0:
+            return self.alive
         if 'blur' not in self.statuses and 'barricade' not in self.permanents:
             self.cur_block = 0
         
-        # make copy of statuses and then iterate over them
-        # -1 deletes keys that hit 0.
-        for status in list(self.statuses.keys()):
-            value = self.statuses[status]
-            if status == 'poison':
-                self.hp -= value
-            if isinstance(value, int):
-                self.statuses[status] -= 1
         return self.alive
     
     def end_turn_resolution(self) -> bool:
@@ -311,7 +403,26 @@ class Creature:
             self.hp = min(self.hp + self.statuses.regeneration, self.max_hp)
         
         self.turns_taken += 1
+        
+        # make copy of statuses and then iterate over them
+        # -1 deletes keys that hit 0.
+        for status in list(self.statuses.keys()):
+            value = self.statuses[status]
+            if status == 'poison':
+                self.hp -= value
+            if isinstance(value, int):
+                self.statuses[status] -= 1
         return self.alive
+    
+
+    def take_action(self) -> Attack:
+        action = self.pick_action()
+        logging.info(f'{self} took action {action}.')
+        attack = self.action_dict[action]()
+        self.turns_taken += 1
+        self.prev_actions.append(action)
+        return attack
+        
     
     # def take_turn(self, **kw: dict[str, t.Any]) -> None:
     #     action = self.pick_action()

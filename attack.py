@@ -7,7 +7,7 @@ class Attack:
         self,
         damage: int | None = None,
         hits: int = 1,
-        statuses: t.Dict[str, int] | None = None,
+        statuses: t.Dict[str, t.Any] | None = None,
         target: t.Creature | None = None,
         multi_target: bool = False,
         creature: t.Creature | None = None,

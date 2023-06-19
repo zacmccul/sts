@@ -5,6 +5,10 @@ Ascension primarily.
 
 """
 
+
+
+import logging
+
 class Settings:
     
     def __init__(self) -> None:
@@ -14,3 +18,4 @@ class Settings:
 
 
 settings = Settings()
+logging.basicConfig(level=logging.DEBUG)
