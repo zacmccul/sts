@@ -7,6 +7,7 @@ ALL_STATUSES = set((
 
 ALL_PERMANENTS = set((
     'artifact',
+    'beat_of_death',
     'buffer',
     'dexterity',
     'strength',

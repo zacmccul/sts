@@ -50,18 +50,18 @@ class Heart(Creature):
         #             if isinstance(enemy, Creature):
         #                 enemy.statuses[status] += 2
         return Attack(
-            statuses={"weak": 2, "vulnerable": 2, "frail": 2}, multi_target=True
+            statuses={"weak": 2, "vulnerable": 2, "frail": 2}, multi_target=True, creature = self
         )
 
     def blood_shots(self, **kw: dict[str, t.Any]) -> Attack:
         if settings.ascension < 4:
-            return Attack(damage=2 + self.strength, hits=12)
-        return Attack(damage=2 + self.strength, hits=15)
+            return Attack(damage=2 + self.strength, hits=12, creature = self)
+        return Attack(damage=2 + self.strength, hits=15, creature = self)
 
     def echo(self, **kw: dict[str, t.Any]) -> Attack:
         if settings.ascension < 4:
-            return Attack(damage=40 + self.strength)
-        return Attack(damage=45 + self.strength)
+            return Attack(damage=40 + self.strength, creature = self)
+        return Attack(damage=45 + self.strength, creature = self)
 
     def buff(self, **kw: dict[str, t.Any]) -> Attack:
         if "strength_down" in self.statuses:
@@ -80,4 +80,4 @@ class Heart(Creature):
             self.strength += 50
 
         self.__num_times_buffed += 1
-        return Attack()
+        return Attack(creature = self)

@@ -62,23 +62,23 @@ class JawWorm(Creature):
     
     def chomp(self, **kw: dict[str, t.Any]) -> Attack:
         if settings.ascension < 2:
-            return Attack(damage= 11 + self.strength)
-        return Attack(damage = 12 + self.strength)
+            return Attack(damage= 11 + self.strength, creature = self)
+        return Attack(damage = 12 + self.strength, creature = self)
     
     def thrash(self, **kw: dict[str, t.Any]) -> Attack:
         self.block += 5
-        return Attack(damage=7 + self.strength)
+        return Attack(damage=7 + self.strength, creature = self)
 
     def bellow(self, **kw: dict[str, t.Any]) -> Attack:
         if settings.ascension < 2:
             self.block += 6
             self.strength += 3
-            return Attack()
+            return Attack(creature = self)
         elif settings.ascension < 17:
             self.block += 6
             self.strength += 4
-            return Attack()
+            return Attack(creature = self)
         else:
             self.block += 9
             self.strength += 5
-            return Attack()
+            return Attack(creature = self)

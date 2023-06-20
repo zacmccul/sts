@@ -3,7 +3,7 @@ from typing import Any
 import custom_typing as t
 import custom_typing as t
 from collections import UserDict
-from attack import Attack
+
 
 import math
 import random
@@ -28,12 +28,17 @@ class ModifierDict(UserDict[str, t.Any]):
         super().__init__()
         self.update(initial_dict)
         self.default_val = default_val
+        
+        # defaults
+        for key in ('strength', 'dexterity'):
+            if key not in self.data:
+                self.data[key] = 0
     
     def __getattr__(self, attr: str) -> t.Any:
-        try:
-            return object.__getattribute__(self, attr)
-        except AttributeError:
-            return self.data[attr]
+        # try:
+        #     return object.__getattribute__(self, attr)
+        # except AttributeError:
+        return self.data[attr]
     
     def __setattr__(self, __name: str, __value: Any) -> None:
         print(f'setattr: {__name}/{__value}')
@@ -48,6 +53,11 @@ class ModifierDict(UserDict[str, t.Any]):
         #     self.data[__name] = __value
         #     return
         return super().__setattr__(__name, __value)
+
+    def __getitem__(self, key: str) -> Any:
+        if key not in self.data:
+            self.data[key] = self.default_val
+        return super().__getitem__(key)
         
 
 class StatusesTest(ModifierDict):
@@ -101,28 +111,15 @@ class AbstractModifier:
         Returns:
             _type_: The corresponding value.
         """
-        print(f'45/attr: {attr}')
-        # try:
-        #     #return getattr(super, attr)
-        #     object.__getattribute__(self, attr)
-        # except AttributeError:
-        # if attr == 'dict':
-        #     return object.__getattribute__(self, attr)
-        if True:
-            print('attr error')
-            if attr in self.dict:
-                print(f'51, {self.dict}')
-                temp = object.__getattribute__(self, 'dict')[attr]
-                print(f'temp: {temp}')
-                return temp
-            elif len(attr) and attr[0] != '_':
-                self.dict[attr] = self.default_val
-                return self.dict[attr]
-            return object.__getattribute__(self, attr)
-            #raise
+
+        if attr in self.dict:
+            return object.__getattribute__(self, 'dict')[attr]
+        elif len(attr) and attr[0] != '_':
+            self.dict[attr] = self.default_val
+            return self.dict[attr]
+        return object.__getattribute__(self, attr)
     
     def __setattr__(self, attr: str, value: t.Any) -> None:
-        print(f'in setattr {attr}/{value}')
         if attr in ('dict', '_keys', 'default_val'):
             super().__setattr__(attr, value)
             return
@@ -205,7 +202,7 @@ class Creature:
                  cur_block: int | None = None,
                  statuses: dict[str, t.Any]  = {},
                  permanents: dict[str, t.Any] = {},
-                 action_dict: dict[str, t.Callable[[], Attack]] = {}
+                 action_dict: dict[str, t.Callable[[], 'Attack']] = {}
                  ) -> None:
         self.raw_hp, self.cur_block = hp, cur_block
         self.max_hp = hp
@@ -233,7 +230,6 @@ class Creature:
         try:
             return getattr(super, attr)
         except AttributeError:
-            print(f'236 {attr}')
             # Creatively check if they exist, and if they should exist,
             # define them and return. This works because everything in the game
             # should be in game_constants.
@@ -246,15 +242,24 @@ class Creature:
             #     return self.permanents[attr]
             if attr in game_constants.ALL_PERMANENTS:
                 # self.permanents.data[attr] = None
-                print(f'249 {attr}')
-                temp = self.permanents[attr]
-                print(f'251 temp: {temp}')
-                return temp
-            # elif attr in self.statuses:
-            #     return getattr(self.statuses, attr)
+                return self.permanents[attr]
             elif attr in game_constants.ALL_STATUSES:
                 return self.statuses[attr]
             raise
+        
+    def __setattr__(self, __name: str, __value: Any) -> None:
+        if __name in game_constants.ALL_PERMANENTS:
+            self.permanents[__name] = __value
+            return
+        elif __name in game_constants.ALL_STATUSES:
+            self.statuses[__name] = __value
+            return
+        else:
+            super().__setattr__(__name, __value)
+            return
+    
+    def __contains__(self, item: t.Any) -> bool:
+        return item in self.permanents or item in self.statuses
             
     
     # exists soley for typechecking to work properly.
@@ -282,6 +287,7 @@ class Creature:
         self.raw_hp = other
         if self.raw_hp <= 0:
             self.alive = False
+            self.raw_hp = 0
     
     @property
     def block(self) -> int:
@@ -342,7 +348,7 @@ class Creature:
         # return self.action_dict[action]
         return next(iter(self.action_dict))
     
-    def take_hit(self, attack: Attack) -> int:
+    def take_hit(self, attack: 'Attack') -> int:
         """_summary_
 
         Args:
@@ -415,7 +421,7 @@ class Creature:
         return self.alive
     
 
-    def take_action(self) -> Attack:
+    def take_action(self) -> 'Attack':
         action = self.pick_action()
         logging.info(f'{self} took action {action}.')
         attack = self.action_dict[action]()
@@ -433,3 +439,5 @@ class Creature:
     #     attack = self.action_dict[action](**kw)
     #     # fill in the rest
     
+if t.TYPE_CHECKING:
+    from attack import Attack

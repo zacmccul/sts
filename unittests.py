@@ -6,6 +6,7 @@ import random
 import simulator
 import game_constants
 import game_status
+import attack
 
 class TestAbstractStatus(unittest.TestCase):
     
@@ -94,11 +95,11 @@ class TestCreature(unittest.TestCase):
         self.assertFalse('weak' in self.creature.statuses)
         
         self.assertEqual(4, self.creature.permanents['strength'])
-        print('right prior')
         self.creature.strength += 3
-        #self.creature.permanents['strength'] += 3
-        print('right after')
+        
         self.assertEqual(7, self.creature.permanents['strength'])
+        self.creature.permanents['strength'] += 3
+        self.assertEqual(10, self.creature.permanents['strength'])
     
     def test_take_hit(self):
         self.creature.start_turn_resolution()
@@ -114,24 +115,24 @@ class TestCreature(unittest.TestCase):
         self.creature.start_turn_resolution()
         self.assertTrue('frail' not in self.creature.statuses)
         
-        self.creature.take_hit(creature.Attack(damage=10))
+        self.creature.take_hit(attack.Attack(damage=10))
         self.assertEqual(self.creature.hp, 90)
         self.creature.statuses['vulnerable'] = 2
-        self.creature.take_hit(creature.Attack(damage=10))
+        self.creature.take_hit(attack.Attack(damage=10))
         self.assertEqual(self.creature.hp, 75)
         
         self.creature.permanents['thorns'] = 5
-        self.assertEqual(self.creature.take_hit(creature.Attack(damage=10)), 5)
+        self.assertEqual(self.creature.take_hit(attack.Attack(damage=10)), 5)
         self.assertEqual(self.creature.hp, 60)
         self.creature.permanents['flame_barrier'] = 10
-        self.assertEqual(self.creature.take_hit(creature.Attack(damage=1)), 15)
+        self.assertEqual(self.creature.take_hit(attack.Attack(damage=1)), 15)
         self.assertEqual(self.creature.hp, 59)
         
         self.creature.statuses['intangible'] = 1
-        self.assertEqual(self.creature.take_hit(creature.Attack(damage=10)), 15)
+        self.assertEqual(self.creature.take_hit(attack.Attack(damage=10)), 15)
         self.assertEqual(self.creature.hp, 58)
         
-        self.creature.take_hit(creature.Attack(damage=0))
+        self.creature.take_hit(attack.Attack(damage=0))
         self.assertEqual(self.creature.hp, 58)
 
     def test_take_damage(self):
@@ -427,4 +428,55 @@ class TestSimulator(unittest.TestCase):
         self.s.resolve_one_creature_turn(worm, True)
         self.assertEqual(worm.hp, 100)
         self.assertEqual(worm.block, 3)
-        self.assertEqual(heart.hp, 83)
+        self.assertEqual(heart.hp, 74)
+        self.assertEqual(worm.frail, 1)
+        self.assertEqual(worm.vulnerable, 1)
+        self.assertEqual(worm.weak, 1)
+        
+        # heart turn 2 blood_shots
+        self.s.resolve_one_creature_turn(heart, False)
+        self.assertEqual(worm.hp, 58)
+        self.assertEqual(worm.block, 0)
+        self.assertEqual(heart.hp, 74)
+        
+        # worm turn 3 bellow
+        self.s.resolve_one_creature_turn(worm, True)
+        self.assertTrue('frail' not in worm)
+        self.assertTrue('vulernable' not in worm)
+        self.assertTrue('weak' not in worm)
+        self.assertEqual(heart.hp, 74)
+        self.assertEqual(worm.hp, 58)
+        self.assertEqual(worm.block, 7)
+        self.assertEqual(worm.strength, 10)
+        
+        # heart turn 3 echo
+        self.s.resolve_one_creature_turn(heart, False)
+        self.assertEqual(worm.hp, 20)
+        self.assertEqual(worm.block, 0)
+        self.assertEqual(heart.hp, 74)
+        
+        # worm turn 4 thrash
+        self.s.resolve_one_creature_turn(worm, True)
+        self.assertEqual(heart.hp, 57)
+        self.assertEqual(worm.hp, 20)
+        self.assertEqual(worm.block, 3)
+        self.assertEqual(worm.strength, 10)
+        
+        # heart turn 4 buff
+        self.s.resolve_one_creature_turn(heart, False)
+        self.assertEqual(heart.strength, 2)
+        self.assertEqual(heart.artifact, 2)
+        
+        # worm turn 5 chomp
+        self.s.resolve_one_creature_turn(worm, True)
+        self.assertEqual(worm.hp, 18)
+        self.assertEqual(heart.hp, 35)
+        
+        # heart turn 5 blood shots
+        self.s.resolve_one_creature_turn(heart, False)
+        self.assertEqual(heart.hp, 35)
+        self.assertEqual(heart.artifact, 2)
+        self.assertEqual(heart.strength, 2)
+        self.assertEqual(worm.hp, 0)
+        self.assertTrue(not worm.alive)
+        

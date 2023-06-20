@@ -1,4 +1,10 @@
+from __future__ import annotations
 import custom_typing as t
+
+# if t.TYPE_CHECKING:
+#     from creature import Creature
+
+
 import math
 
 
@@ -8,9 +14,9 @@ class Attack:
         damage: int | None = None,
         hits: int = 1,
         statuses: t.Dict[str, t.Any] | None = None,
-        target: t.Creature | None = None,
+        target: 'Creature' | None = None,
         multi_target: bool = False,
-        creature: t.Creature | None = None,
+        creature: 'Creature' | None = None,
     ) -> None:
         self.damage: int = damage if damage is not None else 0
         self.hits = hits if damage is not None else 0
@@ -30,3 +36,6 @@ class Attack:
 
     def __repr__(self) -> str:
         return f'Attack(damage={self.damage}, hits={self.hits}, statuses={self.statuses}, target={self.target})'
+    
+if t.TYPE_CHECKING:
+    from creature import Creature
