@@ -479,4 +479,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(heart.strength, 2)
         self.assertEqual(worm.hp, 0)
         self.assertTrue(not worm.alive)
-        
+    
+    def test_one_battle(self) -> None:
+        self.assertFalse(self.s.one_battle())
