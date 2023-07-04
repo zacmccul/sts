@@ -7,7 +7,8 @@ import simulator
 import game_constants
 import game_status
 import attack
-
+import logging
+import copy
 class TestAbstractStatus(unittest.TestCase):
     
     def setUp(self):
@@ -81,8 +82,13 @@ class TestCreature(unittest.TestCase):
     def setUp(self):
         self.creature = creature.Creature(100, 10, {'frail': 2}, {'strength': 4})
         
-    
-
+    def test_copy(self):
+        copied_creature = copy.deepcopy(self.creature)
+        self.assertFalse(copied_creature is self.creature)
+        self.assertFalse(copied_creature.statuses is self.creature.statuses)
+        self.assertFalse(copied_creature.permanents is self.creature.permanents)
+        self.assertTrue(isinstance(copied_creature.permanents, creature.PermanentsTest))
+        self.assertTrue(isinstance(copied_creature.statuses, creature.StatusesTest))
 
     def test_access(self):
         self.assertEqual(100, self.creature.hp)
@@ -187,6 +193,20 @@ class TestHeart(unittest.TestCase):
     
     def setUp(self) -> None:
         self.h = heart.Heart()
+    
+    def test_contains(self):
+        self.assertTrue('beat_of_death' in self.h.permanents)
+        self.assertFalse('beat_of_death' in self.h.statuses)
+        self.assertEqual(self.h.permanents['beat_of_death'], 2)
+        self.assertTrue('beat_of_death' in self.h)
+        self.assertFalse('beat_of_death' in self.h.statuses)
+        self.assertTrue('beat_of_death' in self.h.permanents)
+    
+    def test_copy(self):
+        copied_heart = copy.deepcopy(self.h)
+        self.assertFalse(copied_heart is self.h)
+        self.assertFalse(copied_heart.statuses is self.h.statuses)
+        self.assertFalse(copied_heart.permanents is self.h.permanents)
     
     def test_moves(self):
         self.assertEqual(self.h.strength, 0)
@@ -407,7 +427,6 @@ class TestSimulator(unittest.TestCase):
         
         self.assertEqual(worm.strength, 5)
         
-        
         # worm chomp attack
         self.s.resolve_one_creature_turn(worm, True)
         self.assertEqual(worm.hp, 100)
@@ -423,7 +442,6 @@ class TestSimulator(unittest.TestCase):
         self.assertTrue('vulnerable' in worm.statuses)
         self.assertTrue('weak' in worm.statuses)
 
-        
         # worm turn 2 thrash: 
         self.s.resolve_one_creature_turn(worm, True)
         self.assertEqual(worm.hp, 100)
@@ -442,7 +460,7 @@ class TestSimulator(unittest.TestCase):
         # worm turn 3 bellow
         self.s.resolve_one_creature_turn(worm, True)
         self.assertTrue('frail' not in worm)
-        self.assertTrue('vulernable' not in worm)
+        self.assertTrue('vulnerable' not in worm)
         self.assertTrue('weak' not in worm)
         self.assertEqual(heart.hp, 74)
         self.assertEqual(worm.hp, 58)
@@ -480,5 +498,26 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(worm.hp, 0)
         self.assertTrue(not worm.alive)
     
+    def test_copy(self):
+        clone_sim = copy.deepcopy(self.s)
+        self.assertFalse(clone_sim is self.s)
+        self.assertFalse(clone_sim.left_creatures is self.s.left_creatures)
+        self.assertFalse(clone_sim.right_creatures is self.s.right_creatures)
+        for creature in self.s.left_creatures:
+            self.assertFalse(creature is clone_sim.left_creatures[self.s.left_creatures.index(creature)])
+        for creature in self.s.right_creatures:
+            self.assertFalse(creature is clone_sim.right_creatures[self.s.right_creatures.index(creature)])
+    
     def test_one_battle(self) -> None:
         self.assertFalse(self.s.one_battle())
+    
+    def test_simulate(self) -> None:
+        logging.disable(logging.CRITICAL)
+        self.s = simulator.Simulator([jaw_worm.JawWorm(), 
+                                      jaw_worm.JawWorm(), 
+                                      jaw_worm.JawWorm(), 
+                                      jaw_worm.JawWorm(),
+                                      jaw_worm.JawWorm(),
+                                      jaw_worm.JawWorm(),], [heart.Heart()])
+        self.s.simulate(num_cores=1)
+        

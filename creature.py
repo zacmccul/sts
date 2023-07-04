@@ -5,6 +5,7 @@ import custom_typing as t
 from collections import UserDict
 
 
+import copy
 import math
 import logging
 import game_constants
@@ -33,23 +34,16 @@ class ModifierDict(UserDict[str, t.Any]):
                 self.data[key] = 0
 
     def __getattr__(self, attr: str) -> t.Any:
-        # try:
-        #     return object.__getattribute__(self, attr)
-        # except AttributeError:
-        return self.data[attr]
+        if attr == 'data':
+            return super().__getattribute__(attr)
+        try:
+            return self.data[attr]
+        except KeyError:
+            raise AttributeError
 
     def __setattr__(self, __name: str, __value: Any) -> None:
-        print(f"setattr: {__name}/{__value}")
         if __name in ("data", "default_val"):
             return super().__setattr__(__name, __value)
-        # try:
-        #     cur_val = super().__getattribute__(__name)
-        # except AttributeError:
-        #     cur_val = None
-        # if isinstance(__value, int) and cur_val is None:
-        #     print('??')
-        #     self.data[__name] = __value
-        #     return
         return super().__setattr__(__name, __value)
 
     def __getitem__(self, key: str) -> Any:
@@ -273,6 +267,10 @@ class Creature:
             return f"{self.__class__.__name__}(hp={self.hp}, block={self.block}, permanents={self.permanents}, statuses={self.statuses})"
 
         return f"{self.__class__.__name__}(hp={self.hp}, block={self.block})"
+
+    @property
+    def name(self) -> str:
+        return self.__class__.__name__
 
     @property
     def hp(self) -> int:
