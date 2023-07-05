@@ -101,7 +101,11 @@ class Creature:
 
     def __repr__(self) -> str:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            return f"{self.__class__.__name__}(hp={self.hp}, block={self.block}, permanents={self.permanents}, statuses={self.statuses})"
+            return (
+                f"{self.__class__.__name__}(hp={self.hp},"
+                f"block={self.block}, permanents={self.permanents},"
+                f"statuses={self.statuses})"
+            )
 
         return f"{self.__class__.__name__}(hp={self.hp}, block={self.block})"
 
@@ -202,7 +206,8 @@ class Creature:
         """Resolves the end of turn effects for a creature.
 
         Args:
-            creature (Creature): The creature to resolve the end of turn effects for, based upon statuses.
+            creature (Creature): The creature to resolve the end of turn
+                effects for, based upon statuses.
 
         Returns:
             bool: True if the creature is still alive, False otherwise.

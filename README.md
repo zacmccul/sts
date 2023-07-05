@@ -1,4 +1,6 @@
 # sts
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 
 A quick and dirty foundation for simulating slay the spire combats of enemies v enemies. Originally designed to answer the eternal question: how many Jaw Worms does it take to kill a heart? (6 at asc20, act 3 jaw worms).
 

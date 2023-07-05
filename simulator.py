@@ -1,6 +1,6 @@
 """
 simulator.py
-Contains a class Simulator to provide the simulator code. This allows for a 
+Contains a class Simulator to provide the simulator code. This allows for a
 consumer to create a simulation between the supported creatures, run in single
 or multiprocessing, and get printed to console results.
 
@@ -193,14 +193,18 @@ class Simulator:
         seed: None | int | float | str | bytes | bytearray = None,
         num_iters: int = 1,
     ) -> t.Tuple[int, t.ResultDict]:
-        """A helper method to simulate single threaded the battles. Used for multiprocessing or single process.
+        """A helper method to simulate single threaded the battles. Used for
+        multiprocessing or single process.
 
         Args:
-            seed (None | int | float | str | bytes | bytearray, optional): The random seed to use, if None doens't pass any argument. Defaults to None.
+            seed (None | int | float | str | bytes | bytearray, optional): The
+                random seed to use, if None doens't pass any argument.
+                Defaults to None.
             num_iters (int, optional): Number of iterations to run. Defaults to 1.
 
         Returns:
-            t.Tuple[int, t.ResultDict]: (number of wins by left side, results dictionary)
+            t.Tuple[int, t.ResultDict]: (number of wins by left side,
+                results dictionary)
         """
         if seed is None:
             random.seed()
@@ -224,11 +228,14 @@ class Simulator:
         result_state: t.Dict[str, t.Dict[str, t.List[str | t.Tuple[str, int]]]],
     ) -> None:
         """Merges the results of a battle into the results dictionary. Example:
-        results = {'left': {'creature1': {'total_hp': 100, 'count': 1}}, 'right': {'creature2': {'total_hp': 100, 'count': 1}}}
+        results = {'left': {'creature1': {'total_hp': 100, 'count': 1}},
+                    'right': {'creature2': {'total_hp': 100, 'count': 1}}}
 
         Args:
-            results (t.Dict[str, t.Dict[str, t.Dict[str, int]]]): The core results dicitonary to merge data into
-            result_state (t.Dict[str,t.Dict[str, t.List[str  |  t.Tuple[str, int]]]]): The results of a single battle
+            results (t.Dict[str, t.Dict[str, t.Dict[str, int]]]): The core
+                results dicitonary to merge data into
+            result_state (t.Dict[str,t.Dict[str, t.List[str  |  t.Tuple[str, int]]]]):
+                The results of a single battle
         """
         for side in result_state:
             result_name = side.split("_")[0]  # get left or right
@@ -295,7 +302,8 @@ class Simulator:
                     num_left_wins += left_wins
                     self.update_results(results, result_dict)
                     logging.info(
-                        f"Simulated {i*num_cores} battles. Left win rate: {num_left_wins / ((i+1) * num_battles // num_cores)}"
+                        f"Simulated {i*num_cores} battles. Left win rate: "
+                        f"{num_left_wins / ((i+1) * num_battles // num_cores)}"
                     )
         else:
             for i in range(num_battles):

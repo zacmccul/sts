@@ -1,8 +1,6 @@
-rules = [
-    
-]
+rules = []
 
 
 class Rule:
-    
+
     pass

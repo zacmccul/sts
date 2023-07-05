@@ -1,4 +1,3 @@
-
 from collections import UserDict
 import custom_typing as t
 
@@ -15,7 +14,7 @@ class ModifierDict(UserDict[str, t.Any]):
                 self.data[key] = 0
 
     def __getattr__(self, attr: str) -> t.Any:
-        if attr == 'data':
+        if attr == "data":
             return super().__getattribute__(attr)
         try:
             return self.data[attr]

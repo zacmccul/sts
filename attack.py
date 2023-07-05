@@ -54,7 +54,10 @@ class Attack:
         return False
 
     def __repr__(self) -> str:
-        return f"Attack(damage={self.damage}, hits={self.hits}, statuses={self.statuses}, target={self.target})"
+        return (
+            f"Attack(damage={self.damage}, hits={self.hits}, "
+            f"statuses={self.statuses}, target={self.target})"
+        )
 
 
 if t.TYPE_CHECKING:

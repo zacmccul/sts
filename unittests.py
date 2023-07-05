@@ -467,21 +467,23 @@ class TestUtils(unittest.TestCase):
             assert str(e) == "All elements have been chosen"
 
         try:
-            valueErrorChooser = RandomChooser(["a"], [])  # type: ignore
+            RandomChooser(["a"], [])  # type: ignore
         except ValueError as e:
             self.assertEqual(
                 str(e), "The lists elements and weights must have the same length"
             )
 
         try:
-            valueErrorChooser = RandomChooser(["a", "b"], [0.1, 0.2])  # type: ignore
+            RandomChooser(["a", "b"], [0.1, 0.2])  # type: ignore
         except ValueError as e:
             self.assertEqual(str(e), "The weights must sum up to 1")
 
     def test_safe_add(self):
         from utils import safe_add
 
-        custom_obj: t.Callable[[t.Any], t.Any] = lambda _: _
+        def custom_obj(_: t.Any) -> t.Any:
+            return _
+
         custom_obj.statuses = {}  # type: ignore
         self.assertFalse(safe_add(custom_obj, "statuses", {}))
         self.assertTrue(safe_add(custom_obj, "test", 3))
@@ -584,15 +586,15 @@ class TestSimulator(unittest.TestCase):
         self.assertFalse(clone_sim is self.s)
         self.assertFalse(clone_sim.left_creatures is self.s.left_creatures)
         self.assertFalse(clone_sim.right_creatures is self.s.right_creatures)
-        for creature in self.s.left_creatures:
+        for a_creature in self.s.left_creatures:
             self.assertFalse(
-                creature
-                is clone_sim.left_creatures[self.s.left_creatures.index(creature)]
+                a_creature
+                is clone_sim.left_creatures[self.s.left_creatures.index(a_creature)]
             )
-        for creature in self.s.right_creatures:
+        for b_creature in self.s.right_creatures:
             self.assertFalse(
-                creature
-                is clone_sim.right_creatures[self.s.right_creatures.index(creature)]
+                b_creature
+                is clone_sim.right_creatures[self.s.right_creatures.index(b_creature)]
             )
 
     def test_one_battle(self) -> None:

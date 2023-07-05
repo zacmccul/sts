@@ -61,14 +61,17 @@ def increment_status(obj: t.Any, status_name: str, increment_amount: int = -1) -
 class RandomChooser:
     def __init__(self, elements: t.List[str], weights: t.List[float]) -> None:
         """
-        Initializes the RandomChooser object with a list of elements and a corresponding list of weights.
+        Initializes the RandomChooser object with a list of elements and a
+        corresponding list of weights.
 
         Args:
             elements (List[str]): List of elements to choose from.
-            weights (List[float]): Corresponding weights for each element. Must sum up to 1.
+            weights (List[float]): Corresponding weights for each element.
+                Must sum up to 1.
 
         Raises:
-            ValueError: If the lists elements and weights do not have the same length, or if weights do not sum to 1.
+            ValueError: If the lists elements and weights do not have the same
+                length, or if weights do not sum to 1.
         """
         if len(elements) != len(weights):
             raise ValueError("The lists elements and weights must have the same length")
