@@ -6,10 +6,14 @@ A quick and dirty foundation for simulating slay the spire combats of enemies v 
 
 Todo:
 * Clean up code, finish adding docstrings, typing for everything
-* Get code coverage badge working
-* Impove unit testing coverage
-* Githook for black formatting
 * Add ability to log individual battles for manual inspection, e.g. let's see the combat log from a jaw worm kill of the heart or vice versa.
+* Installation instructions
+
+Finished:
+* Githook for black formatting
+* Impove unit testing coverage
+* Get code coverage badge working
+
 
 Current supported creatures:
 * Jaw Worm
