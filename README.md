@@ -1,1 +1,14 @@
 # sts
+
+A quick and dirty foundation for simulating slay the spire combats of enemies v enemies. Originally designed to answer the eternal question: how many Jaw Worms does it take to kill a heart? (6 at asc20, act 3 jaw worms).
+
+Todo:
+* Clean up code, finish adding docstrings, typing for everything
+* Get code coverage badge working
+* Impove unit testing coverage
+* Githook for black formatting
+* Add ability to log individual battles for manual inspection, e.g. let's see the combat log from a jaw worm kill of the heart or vice versa.
+
+Current supported creatures:
+* Jaw Worm
+* Heart
