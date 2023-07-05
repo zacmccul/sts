@@ -1,3 +1,9 @@
+"""
+game_constants.py
+This provides for dynamic set of what attributes can be keyed upon.
+Zachary McCullough
+"""
+
 ALL_STATUSES = set((
     'frail',
     'regeneration',

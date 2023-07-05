@@ -1,15 +1,31 @@
-import typing as t
-import random
+"""
+utils.py
+Provides random utility functions that don't fit under a neat categorization
+and need to live somewhere.
+Zachary McCullough
+"""
 
-def safe_add(obj: t.Any, attr_name: str, default: t.Any=None) -> bool:
-    """A safe function to add an attribute to an object. Returns False if 
+#########
+# Classes
+#########
+
+import random
+import typing as t
+
+###########
+# Functions
+###########
+
+
+def safe_add(obj: t.Any, attr_name: str, default: t.Any = None) -> bool:
+    """A safe function to add an attribute to an object. Returns False if
     the attribute already exists and nothing happens, True if the attribute
     is set with the default value.
 
     Args:
         obj (t.Any): Some object to set the attribute on
         attr_name (str): The name of the attribute
-        default (t.Any, optional): The value to set the attribute to. 
+        default (t.Any, optional): The value to set the attribute to.
             Defaults to None.
 
     Returns:
@@ -21,7 +37,7 @@ def safe_add(obj: t.Any, attr_name: str, default: t.Any=None) -> bool:
     return True
 
 
-def increment_status(obj: t.Any, status_name: str, increment_amount=-1):
+def increment_status(obj: t.Any, status_name: str, increment_amount: int = -1) -> None:
     """On a creature like Jaw Worm, change a particular status by an amount.
     If the status doesn't exist, set it to the increment_amount if positive.
     Defaults to decrementing one like at the start of a turn.
@@ -29,13 +45,18 @@ def increment_status(obj: t.Any, status_name: str, increment_amount=-1):
     Args:
         obj (t.Any): The creature
         status_name (_type_): The status name, like vulnerable, weak, etc.
-        increment_amount (int, optional): The amount to modify the status by. 
+        increment_amount (int, optional): The amount to modify the status by.
         Defaults to -1.
     """
-    
+
     # ensure the obj has a statuses attribute
-    safe_add(obj, 'statuses', {})
-    
+    safe_add(obj, "statuses", {})
+
+
+#########
+# Classes
+#########
+
 
 class RandomChooser:
     def __init__(self, elements: t.List[str], weights: t.List[float]) -> None:
