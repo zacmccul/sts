@@ -10,6 +10,8 @@ import attack
 import logging
 import copy
 import modifier_dict
+import typing as t
+import game_config
 
 
 class TestAbstractStatus(unittest.TestCase):
@@ -68,6 +70,14 @@ class TestAbstractDerived(unittest.TestCase):
             sorted(list(key for key in self.abs)),
             sorted(["frail", "dexterity", "strength"]),
         )
+
+    def test_turn_start(self):
+        self.abs.turn_start()
+        self.assertEqual(self.abs["frail"], 1)
+        self.abs.turn_start()
+        self.assertEqual(self.abs["frail"], 0)
+        self.abs.turn_start()
+        self.assertTrue("frail" not in self.abs)
 
 
 class TestGameConstants(unittest.TestCase):
@@ -200,7 +210,20 @@ class TestCreature(unittest.TestCase):
 
 class TestHeart(unittest.TestCase):
     def setUp(self) -> None:
+        game_config.settings.ascension = 20
+        game_status.state.act = 3
         self.h = heart.Heart()
+
+    def test_init(self):
+        self.assertEqual(self.h.permanents["beat_of_death"], 2)
+        self.assertEqual(self.h.permanents["invincible"], 200)
+        self.assertEqual(self.h.hp, 800)
+        game_config.settings.ascension = 0
+        test = heart.Heart()
+        self.assertEqual(test.permanents["beat_of_death"], 1)
+        self.assertEqual(test.permanents["invincible"], 300)
+        self.assertEqual(test.hp, 750)
+        game_config.settings.ascension = 20
 
     def test_contains(self):
         self.assertTrue("beat_of_death" in self.h.permanents)
@@ -224,8 +247,15 @@ class TestHeart(unittest.TestCase):
         self.assertEqual(self.h.echo(), 45)
         self.assertEqual(self.h.buff(), 0)
 
+        game_config.settings.ascension = 0
+        self.assertEqual(self.h.blood_shots(), 4 * 12)
+        self.assertEqual(self.h.echo(), 42)
+
     def test_pick_action(self):
         random.seed(0)
+
+        self.assertEqual(self.h.permanents["beat_of_death"], 2)
+
         self.assertEqual(self.h.pick_action(), "debilitate")
         self.h.turns_taken += 1
         self.h.prev_actions.append("debilitate")
@@ -351,6 +381,26 @@ class TestJawWorm(unittest.TestCase):
         self.assertEqual(self.worm.block, 23)
         self.assertEqual(self.worm.strength, 10)
 
+        game_config.settings.ascension = 0
+        game_status.state.act = 1
+        self.worm = jaw_worm.JawWorm(hp=100)
+
+        self.assertEqual(self.worm.strength, 0)
+        self.assertEqual(self.worm.block, 0)
+        self.assertEqual(self.worm.chomp(), 11)
+        self.worm.bellow()
+        self.assertEqual(self.worm.block, 6)
+        self.assertEqual(self.worm.strength, 3)
+
+        game_config.settings.ascension = 2
+        self.worm = jaw_worm.JawWorm(hp=100)
+
+        self.worm.bellow()
+        self.assertEqual(self.worm.strength, 4)
+        self.assertEqual(self.worm.block, 6)
+
+        game_status.state.act = 3
+
     def test_pick_action(self):
         random.seed(0)
         self.assertEqual(self.worm.pick_action(), "chomp")
@@ -416,9 +466,32 @@ class TestUtils(unittest.TestCase):
         except Exception as e:
             assert str(e) == "All elements have been chosen"
 
+        try:
+            valueErrorChooser = RandomChooser(["a"], [])  # type: ignore
+        except ValueError as e:
+            self.assertEqual(
+                str(e), "The lists elements and weights must have the same length"
+            )
+
+        try:
+            valueErrorChooser = RandomChooser(["a", "b"], [0.1, 0.2])  # type: ignore
+        except ValueError as e:
+            self.assertEqual(str(e), "The weights must sum up to 1")
+
+    def test_safe_add(self):
+        from utils import safe_add
+
+        custom_obj: t.Callable[[t.Any], t.Any] = lambda _: _
+        custom_obj.statuses = {}  # type: ignore
+        self.assertFalse(safe_add(custom_obj, "statuses", {}))
+        self.assertTrue(safe_add(custom_obj, "test", 3))
+        self.assertEqual(custom_obj.test, 3)  # type: ignore
+
 
 class TestSimulator(unittest.TestCase):
     def setUp(self) -> None:
+        game_config.settings.ascension = 20
+        game_status.state.act = 3
         self.s = simulator.Simulator([jaw_worm.JawWorm(hp=100)], [heart.Heart(hp=100)])
         return super().setUp()
 
@@ -554,3 +627,27 @@ class TestSimulator(unittest.TestCase):
             [heart.Heart()],
         )
         self.s.simulate(num_cores=4, num_battles=1_000)
+
+
+class TestAttack(unittest.TestCase):
+    def setUp(self) -> None:
+        self.attack1 = attack.Attack(damage=10, hits=1)
+        self.attack2 = attack.Attack(damage=10, hits=1, statuses={"weak": 1})
+        return super().setUp()
+
+    def test_equal(self):
+        self.assertEqual(self.attack1, attack.Attack(damage=10, hits=1))
+        self.assertEqual(
+            self.attack2, attack.Attack(damage=10, hits=1, statuses={"weak": 1})
+        )
+        self.assertEqual(self.attack1, self.attack1)
+        self.assertNotEqual(self.attack1, self.attack2)
+
+    def test_repr(self):
+        self.assertEqual(
+            repr(self.attack1), "Attack(damage=10, hits=1, statuses=None, target=None)"
+        )
+        self.assertEqual(
+            repr(self.attack2),
+            "Attack(damage=10, hits=1, statuses={'weak': 1}, target=None)",
+        )
