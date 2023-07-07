@@ -79,9 +79,13 @@ class Simulator:
         logging.debug(
             f"Acting Creature: {creature}. Enemy creatures: {enemy_creatures}"
         )
-        targets = enemy_creatures
+        targets = [enemy for enemy in enemy_creatures if enemy.alive]
+
+        if len(targets) == 0:
+            logging.info("No targets for attack")
+            return
         if not attack.multi_target:
-            targets = random.choices(enemy_creatures, k=1)
+            targets = random.choices(targets, k=1)
 
         for target in targets:
             # for each hit in the attack
@@ -278,7 +282,9 @@ class Simulator:
                     ]["count"]
         del additional_dict
 
-    def simulate(self, num_battles: int = 100_000, num_cores: int = 4) -> None:
+    def simulate(
+        self, num_battles: int = 100_000, num_cores: int = 4, seed: None | int = None
+    ) -> None:
         """Simulates a number of battles between the two teams.
 
         Args:
@@ -293,7 +299,9 @@ class Simulator:
             with ProcessPoolExecutor(max_workers=num_cores) as executor:
                 running_tasks = [
                     executor.submit(
-                        self._simulate_mp, time.time_ns(), num_battles // num_cores
+                        self._simulate_mp,
+                        time.time_ns() if seed is not None else seed,
+                        num_battles // num_cores,
                     )
                     for _ in range(num_cores)
                 ]
@@ -307,7 +315,9 @@ class Simulator:
                     )
         else:
             for i in range(num_battles):
-                left_won, result_state = self._simulate_mp(seed=i)
+                left_won, result_state = self._simulate_mp(
+                    seed=i if seed is not None else seed
+                )
                 num_left_wins += left_won
                 self.update_results(results, result_state)
                 if i % 1000 == 0 and i != 0:
@@ -316,3 +326,106 @@ class Simulator:
                     )
         print(f"Left win rate: {num_left_wins / num_battles}")
         print(results)
+
+    def _simulate_search_mp(
+        self, num_battles: int, base_seed: int, args: t.Dict[str, t.Any]
+    ) -> t.Any:
+        """_summary_
+
+        Args:
+            base_seed (int): Seeds are iterated upon by adding 1 each iter, this is the first seed.
+
+        Returns:
+            t.Any: _description_
+        """
+
+        one_side_search = None
+        if "a_left_win" in args and "a_right_win" in args:
+            if bool(args["a_left_win"]) ^ bool(args["a_right_win"]):
+                one_side_search = bool(args["a_left_win"])
+            else:
+                raise ValueError(
+                    f"Cannot search for both/neither a left win and a right win."
+                    f'Got a_left_win: {args["a_left_win"]}, a_right_win: {args["a_right_win"]}'
+                )
+        elif "a_left_win" not in args and "a_right_win" not in args:
+            raise ValueError(
+                "Must provide a search criteria. Options: a_left_win, a_right_win"
+            )
+        else:
+            one_side_search = (
+                bool(args["a_left_win"]) if "a_left_win" in args else False
+            )
+
+        # In future expand this to check for more conditions
+        if one_side_search is None:  # type: ignore
+            raise ValueError(
+                "Must provide a search criteria. Options: a_left_win, a_right_win"
+            )
+
+        cur_seed = base_seed
+        # Do the simulation
+        for _ in range(num_battles):
+            new_sim = copy.deepcopy(self)
+            random.seed(cur_seed)
+            result = new_sim.one_battle()
+            # we got a left win and want a left win, or we got a right win and want a right win
+            if result == one_side_search:
+                return cur_seed
+            cur_seed += 1
+        return None
+
+    def simulation_search(self, /, **kwargs: t.Any) -> t.Any:
+        """Performs a search over the simulation space.
+
+        Args:
+            **kwargs (t.Dict[str, t.Any]): The search criteria. Options:
+                'a_left_win': Returns (true, seed) if a left win is found.
+                    Return's the seed used for random for this. Cannot be used with 'a_right_win'.
+                'a_right_win': Returns (true, seed) if a right win is found.
+                    Return's the seed used for random for this. Cannot be used with 'a_left_win'.
+                'max_battles': The maximum number of battles to run. Defaults to 1_000.
+                    Set to -1 for infinite.
+                'num_cores': The number of cores to use. Defaults to 4.
+                    Set to 1 for single threaded. If logging is desired, MUST be set to 1.
+
+        Returns:
+            t.Any: The relevant value of the search criteria.
+        """
+
+        max_battles = 1_000
+        num_cores = 4
+        search_for_win = None
+
+        print(f"kwargs: {kwargs}")
+
+        if "num_cores" in kwargs:
+            num_cores = t.cast(int, kwargs["num_cores"])
+        if "max_battles" in kwargs:
+            max_battles = t.cast(int, kwargs["max_battles"])
+        if "a_left_win" in kwargs:
+            search_for_win = True
+        elif "a_right_win" in kwargs:
+            search_for_win = False
+
+        # In future we'll accept more options. For now if search_for_win is None,
+        # we don't have a valid search criteria.
+        if search_for_win is None:
+            raise ValueError("No valid search criteria provided.")
+
+        # this should work?
+        if True:  # num_cores > 1:
+            with ProcessPoolExecutor(max_workers=num_cores) as executor:
+                running_tasks = [
+                    executor.submit(
+                        self._simulate_search_mp,
+                        seed * max_battles // num_cores,
+                        max_battles // num_cores,
+                        kwargs,
+                    )
+                    for seed in range(num_cores)
+                ]
+                for _, task in enumerate(running_tasks):
+                    winning_seed = task.result()
+                    if winning_seed is not None:
+                        return winning_seed

@@ -581,6 +581,123 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(worm.hp, 0)
         self.assertTrue(not worm.alive)
 
+    def test_resolve_one_creature_turn_multiple_enemies(self):
+        new_sim = simulator.Simulator(
+            [jaw_worm.JawWorm(hp=50), jaw_worm.JawWorm(hp=50)],
+            [heart.Heart(hp=50), heart.Heart(hp=50)],
+        )
+        random.seed(0)
+        worm_1, worm_2 = new_sim.left_creatures[0], new_sim.left_creatures[1]
+        heart_1, heart_2 = new_sim.right_creatures[0], new_sim.right_creatures[1]
+
+        # worm 1  chomp attack
+        new_sim.resolve_one_creature_turn(worm_1, True)
+        self.assertEqual(worm_1.hp, 50)
+        self.assertEqual(worm_1.block, 5)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 33)
+
+        # worm 2 chomp attack
+        new_sim.resolve_one_creature_turn(worm_2, True)
+        self.assertEqual(worm_2.hp, 50)
+        self.assertEqual(worm_2.block, 5)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 16)
+
+        # heart 1 debuff
+        new_sim.resolve_one_creature_turn(heart_1, False)
+        self.assertEqual(worm_1.hp, 50)
+        self.assertEqual(worm_1.block, 5)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 16)
+        self.assertEqual(worm_2.hp, 50)
+        self.assertEqual(worm_2.block, 5)
+        self.assertTrue("frail" in worm_1.statuses)
+        self.assertTrue("vulnerable" in worm_1.statuses)
+        self.assertTrue("weak" in worm_1.statuses)
+        self.assertTrue("frail" in worm_2.statuses)
+        self.assertTrue("vulnerable" in worm_2.statuses)
+        self.assertTrue("weak" in worm_2.statuses)
+
+        # heart 2 debuff
+        new_sim.resolve_one_creature_turn(heart_2, False)
+        self.assertEqual(worm_1.hp, 50)
+        self.assertEqual(worm_1.block, 5)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 16)
+        self.assertEqual(worm_2.hp, 50)
+        self.assertEqual(worm_2.block, 5)
+        self.assertEqual(worm_1.frail, 4)
+        self.assertEqual(worm_1.vulnerable, 4)
+        self.assertEqual(worm_1.weak, 4)
+        self.assertEqual(worm_2.frail, 4)
+        self.assertEqual(worm_2.vulnerable, 4)
+        self.assertEqual(worm_2.weak, 4)
+
+        # worm 1 bellow
+        new_sim.resolve_one_creature_turn(worm_1, True)
+        self.assertEqual(worm_1.hp, 50)
+        self.assertEqual(worm_1.block, 5)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 16)
+        self.assertEqual(worm_1.strength, 10)
+
+        # worm 2 bellow
+        new_sim.resolve_one_creature_turn(worm_2, True)
+        self.assertEqual(worm_2.hp, 50)
+        self.assertEqual(worm_2.block, 5)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 16)
+        self.assertEqual(worm_2.strength, 10)
+
+        # heart 1 echo
+        new_sim.resolve_one_creature_turn(heart_1, False)
+        self.assertEqual(worm_1.hp, 0)
+        self.assertEqual(worm_1.block, 0)
+        self.assertFalse(worm_1.alive)
+        self.assertEqual(worm_2.hp, 50)
+        self.assertEqual(worm_2.block, 5)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 16)
+
+        # heart 2 blood shots
+        new_sim.resolve_one_creature_turn(heart_2, False)
+        self.assertEqual(worm_1.hp, 0)
+        self.assertEqual(worm_1.block, 0)
+        self.assertFalse(worm_1.alive)
+        self.assertEqual(worm_2.hp, 10)
+        self.assertEqual(worm_2.block, 0)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 16)
+
+        # worm 1 dead
+        new_sim.resolve_one_creature_turn(worm_1, True)
+        self.assertEqual(worm_1.hp, 0)
+        self.assertEqual(worm_1.block, 0)
+        self.assertFalse(worm_1.alive)
+        self.assertEqual(worm_2.hp, 10)
+        self.assertEqual(worm_2.block, 0)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 16)
+
+        # worm 2 thrash
+        new_sim.resolve_one_creature_turn(worm_2, True)
+        self.assertEqual(worm_2.hp, 10)
+        self.assertEqual(worm_2.block, 1)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 4)
+
+        # heart 1 blood shots
+        new_sim.resolve_one_creature_turn(heart_1, False)
+        self.assertEqual(worm_1.hp, 0)
+        self.assertEqual(worm_1.block, 0)
+        self.assertFalse(worm_1.alive)
+        self.assertEqual(worm_2.hp, 0)
+        self.assertEqual(worm_2.block, 0)
+        self.assertFalse(worm_2.alive)
+        self.assertEqual(heart_1.hp, 50)
+        self.assertEqual(heart_2.hp, 4)
+
     def test_copy(self):
         clone_sim = copy.deepcopy(self.s)
         self.assertFalse(clone_sim is self.s)
@@ -625,10 +742,57 @@ class TestSimulator(unittest.TestCase):
                 jaw_worm.JawWorm(),
                 jaw_worm.JawWorm(),
                 jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
             ],
             [heart.Heart()],
         )
-        self.s.simulate(num_cores=4, num_battles=1_000)
+        self.s.simulate(num_cores=12, num_battles=100_000)
+
+    def test_one_left_win(self) -> None:
+        local_s = simulator.Simulator(
+            [
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+            ],
+            [heart.Heart()],
+        )
+
+        logging.disable(logging.CRITICAL)
+        winning_seed = local_s.simulation_search(a_left_win=True)
+        if winning_seed is not None:
+            print("Winning seed: ", winning_seed)
+            random.seed(winning_seed)
+            logging.disable(-1)
+            self.assertTrue(local_s.one_battle())
+
+    def test_one_right_win(self) -> None:
+        local_s = simulator.Simulator(
+            [
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+                jaw_worm.JawWorm(),
+            ],
+            [heart.Heart()],
+        )
+
+        logging.disable(logging.CRITICAL)
+        winning_seed = local_s.simulation_search(a_right_win=True)
+        if winning_seed is not None:
+            print("Winning seed: ", winning_seed)
+            random.seed(winning_seed)
+            logging.disable(-1)
+            self.assertFalse(local_s.one_battle())
 
 
 class TestAttack(unittest.TestCase):

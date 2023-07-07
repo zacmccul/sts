@@ -31,6 +31,7 @@ CreatureModifiers = Literal[
     "weak",
 ]
 ResultDict = Dict[str, Dict[str, Dict[str, int]]]
+Seed = None | int | float | str | bytes | bytearray
 
 
 # Forward declaring classes
