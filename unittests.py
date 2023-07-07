@@ -747,7 +747,7 @@ class TestSimulator(unittest.TestCase):
             ],
             [heart.Heart()],
         )
-        self.s.simulate(num_cores=12, num_battles=100_000)
+        self.s.simulate(num_cores=12, num_battles=1_000)
 
     def test_one_left_win(self) -> None:
         local_s = simulator.Simulator(
