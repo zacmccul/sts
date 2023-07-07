@@ -8,6 +8,7 @@ Todo:
 * Clean up code, finish adding docstrings, typing for everything
 * Add ability to log individual battles for manual inspection, e.g. let's see the combat log from a jaw worm kill of the heart or vice versa.
 * Installation instructions
+* Add githook for running coverage precommit
 
 Finished:
 * Githook for black formatting
